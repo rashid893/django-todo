@@ -3,101 +3,74 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Simple To-Do List</title>
+  <title>Django TODO (SQLite)</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background: #f8f9fa;
-      padding: 40px;
-      max-width: 500px;
-      margin: auto;
-    }
-    h2 {
-      text-align: center;
-    }
-    #todo-form {
-      display: flex;
-      gap: 10px;
-    }
-    input[type="text"] {
-      flex: 1;
-      padding: 10px;
-      font-size: 16px;
-    }
-    button {
-      padding: 10px 15px;
-      font-size: 16px;
-      cursor: pointer;
-    }
-    ul {
-      list-style: none;
-      padding: 0;
-      margin-top: 20px;
-    }
-    li {
-      background: #fff;
-      margin-bottom: 10px;
-      padding: 10px;
-      border: 1px solid #ccc;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-    li.completed {
-      text-decoration: line-through;
-      color: gray;
-    }
-    .delete-btn {
-      background: red;
-      color: white;
-      border: none;
-      padding: 5px 8px;
-      cursor: pointer;
-    }
+    * { box-sizing: border-box; }
+    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; background: #0b1220; color: #e8eefc; margin: 0; }
+    .container { max-width: 1000px; margin: 2rem auto; padding: 1rem; }
+    h1 { margin: 0 0 1rem 0; }
+    .filters, .add-form { display: flex; gap: .5rem; margin-bottom: 1rem; align-items: center; }
+    .filters input, .filters select, .add-form input { padding: .5rem .6rem; border: 1px solid #324; border-radius: .6rem; background: #0f1830; color: #e8eefc; }
+    .filters button, .add-form button, .actions button { padding: .5rem .8rem; border: 0; border-radius: .6rem; background: #2a66ff; color: white; cursor: pointer; }
+    .filters button:hover, .add-form button:hover, .actions button:hover { filter: brightness(1.1); }
+    table.tasks { width: 100%; border-collapse: collapse; }
+    table.tasks th, table.tasks td { padding: .6rem; border-bottom: 1px solid #223; vertical-align: top; }
+    tr.done td { color: #9bb; text-decoration: line-through; }
+    td.actions { display: flex; gap: .5rem; }
+    td.actions form { display: inline; }
+    .empty { text-align: center; opacity: .8; padding: 1rem; }
   </style>
 </head>
 <body>
+  <div class="container">
+    <h1>📝 TODO List</h1>
 
-  <h2>📝 Simple To-Do List</h2>
+    <form class="filters" method="get" action="{% url 'index' %}">
+      <input type="text" name="q" placeholder="Search…" value="{{ q }}">
+      <select name="show">
+        <option value="all"  {% if show == 'all' %}selected{% endif %}>All ({{ counts.all }})</option>
+        <option value="open" {% if show == 'open' %}selected{% endif %}>Open ({{ counts.open }})</option>
+        <option value="done" {% if show == 'done' %}selected{% endif %}>Done ({{ counts.done }})</option>
+      </select>
+      <button type="submit">Apply</button>
+    </form>
 
-  <form id="todo-form">
-    <input type="text" id="todo-input" placeholder="Add a new task" required />
-    <button type="submit">Add</button>
-  </form>
+    <form class="add-form" method="post" action="{% url 'add' %}">
+      {% csrf_token %}
+      <input required name="title" placeholder="Task title">
+      <input name="notes" placeholder="Notes (optional)">
+      <button type="submit">Add</button>
+    </form>
 
-  <ul id="todo-list"></ul>
-
-  <script>
-    const form = document.getElementById('todo-form');
-    const input = document.getElementById('todo-input');
-    const list = document.getElementById('todo-list');
-
-    form.addEventListener('submit', function(e) {
-      e.preventDefault();
-      const text = input.value.trim();
-      if (text === '') return;
-
-      const li = document.createElement('li');
-
-      const span = document.createElement('span');
-      span.textContent = text;
-      span.addEventListener('click', () => {
-        li.classList.toggle('completed');
-      });
-
-      const btn = document.createElement('button');
-      btn.textContent = 'X';
-      btn.className = 'delete-btn';
-      btn.addEventListener('click', () => {
-        list.removeChild(li);
-      });
-
-      li.appendChild(span);
-      li.appendChild(btn);
-      list.appendChild(li);
-      input.value = '';
-    });
-  </script>
-
+    <table class="tasks">
+      <thead>
+        <tr>
+          <th>#</th><th>Title</th><th>Notes</th><th>Status</th><th>Created</th><th>Completed</th><th>Actions</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for t in tasks %}
+        <tr class="{% if t.done %}done{% endif %}">
+          <td>{{ t.id }}</td>
+          <td>{{ t.title }}</td>
+          <td>{{ t.notes|default_if_none:'' }}</td>
+          <td>{% if t.done %}Done{% else %}Open{% endif %}</td>
+          <td>{{ t.created_at|date:"Y-m-d H:i" }}</td>
+          <td>{% if t.completed_at %}{{ t.completed_at|date:"Y-m-d H:i" }}{% endif %}</td>
+          <td class="actions">
+            <form method="post" action="{% url 'toggle' t.id %}">{% csrf_token %}
+              <button type="submit">{% if t.done %}Reopen{% else %}Complete{% endif %}</button>
+            </form>
+            <form method="post" action="{% url 'delete' t.id %}" onsubmit="return confirm('Delete task?');">{% csrf_token %}
+              <button type="submit">Delete</button>
+            </form>
+          </td>
+        </tr>
+        {% empty %}
+        <tr><td colspan="7" class="empty">No tasks yet. Add one above.</td></tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
 </body>
 </html>
