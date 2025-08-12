@@ -8,17 +8,20 @@ ENV PYTHONUNBUFFERED=1
 # 3. Set working directory
 WORKDIR /app
 
-# 4. Install dependencies
-#COPY requirements.txt .
-RUN pip install --upgrade pip
-#RUN pip install -r requirements.txt
-RUN pip install django
+# 4. Install system dependencies for psycopg2
+RUN apt-get update && apt-get install -y \
+    libpq-dev gcc \
+    && rm -rf /var/lib/apt/lists/*
 
-# 5. Copy all project files
+# 5. Install Python dependencies
+RUN pip install --upgrade pip
+RUN pip install django psycopg2-binary
+
+# 6. Copy all project files
 COPY . .
 
-# 6. Expose port
+# 7. Expose port
 EXPOSE 8000
 
-# 7. Run the Django development server
+# 8. Run the Django development server
 CMD ["python", "manage.py", "runserver", "0.0.0.0:8000"]
