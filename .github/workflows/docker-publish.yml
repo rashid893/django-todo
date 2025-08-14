@@ -2,7 +2,7 @@ name: Build & Push to Docker Hub
 
 on:
   push:
-    branches: [ "master" ]
+    branches: [ "master" ]   # change if your main branch is called main
   workflow_dispatch: {}
 
 jobs:
@@ -10,17 +10,11 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      REPO: rashid893/django-todo   # must be lowercase and match Hub repo
+      REPO: docker.io/rashidbrohi/todo-app   # set your Docker Hub repo here
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Validate login secrets
-        run: |
-          [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] || { echo "Missing DOCKERHUB_USERNAME"; exit 1; }
-          [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ] || { echo "Missing DOCKERHUB_TOKEN"; exit 1; }
-
-      - uses: docker/setup-buildx-action@v3
+      - name: Checkout source
+        uses: actions/checkout@v4
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -37,5 +31,5 @@ jobs:
           platforms: linux/amd64
           push: true
           tags: |
-            docker.io/${{ env.REPO }}:latest
-            docker.io/${{ env.REPO }}:${{ github.sha }}
+            ${{ env.REPO }}:latest
+            ${{ env.REPO }}:${{ github.sha }}
