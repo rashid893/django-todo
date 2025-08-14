@@ -2,35 +2,26 @@ name: Build & Push to Docker Hub
 
 on:
   push:
-    branches: [ "master" ]      # change to main if needed
+    branches: [ "master" ]
   workflow_dispatch: {}
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+    env:
+      # hardcode your repo here (MUST be lowercase)
+      REPO: rashid893/django-todo
 
-      # Fail fast if secrets are missing
-      - name: Validate required secrets
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate login secrets
         run: |
           [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] || { echo "Missing DOCKERHUB_USERNAME"; exit 1; }
           [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ] || { echo "Missing DOCKERHUB_TOKEN"; exit 1; }
-          [ -n "${{ secrets.DOCKERHUB_REPO }}" ] || { echo "Missing DOCKERHUB_REPO (e.g. rashid893/django-todo)"; exit 1; }
 
-          # Normalize & validate repo (lowercase, no spaces, valid pattern)
-          R="$(printf '%s' "${{ secrets.DOCKERHUB_REPO }}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
-          case "$R" in
-            # allowed: namespace/reponame with [a-z0-9] and separators . _ -
-            [a-z0-9][a-z0-9._-]*/[a-z0-9][a-z0-9._-]* ) echo "Repo OK: $R" ;;
-            * ) echo "Invalid DOCKERHUB_REPO: $R"; exit 1 ;;
-          esac
-          echo "REPO=$R" >> $GITHUB_ENV
-
-      - name: Set up Buildx
-        uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
