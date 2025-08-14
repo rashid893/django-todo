@@ -2,54 +2,43 @@ name: Build & Push to Docker Hub
 
 on:
   push:
-    branches: [ "master" ]   # change if your default branch is main
-    tags:     [ "v*" ]       # push tags like v1.0.0 to also publish
+    branches: [ "master" ]     # change to "main" if needed
   workflow_dispatch: {}
-
-env:
-  IMAGE_NAME: django-todo     # change if you prefer another repo name
-  REGISTRY: docker.io
 
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
 
+    env:
+      IMAGE: ${{ secrets.DOCKERHUB_USERNAME }}/django-todo   # repo must be all lowercase
+
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+      - name: Validate secrets (fail fast)
+        run: |
+          [ -n "${{ secrets.DOCKERHUB_USERNAME }}" ] || { echo "Missing DOCKERHUB_USERNAME"; exit 1; }
+          [ -n "${{ secrets.DOCKERHUB_TOKEN }}" ] || { echo "Missing DOCKERHUB_TOKEN"; exit 1; }
 
-      - name: Set up Docker Buildx
+      - name: Set up Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
         with:
+          registry: docker.io
           username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}   # create a Docker Hub access token
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-      - name: Docker meta (tags & labels)
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ secrets.DOCKERHUB_USERNAME }}/${{ env.IMAGE_NAME }}
-          tags: |
-            type=ref,event=branch
-            type=ref,event=tag
-            type=sha
-            type=raw,value=latest,enable={{is_default_branch}}
-
-      - name: Build & Push
+      # Build & push with explicit, safe tags
+      - name: Build and push
         uses: docker/build-push-action@v6
         with:
           context: .
           file: ./Dockerfile
-          push: true
-          # You can add multi-arch if you need both: linux/amd64,linux/arm64
           platforms: linux/amd64
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          push: true
+          tags: |
+            ${{ env.IMAGE }}:latest
+            ${{ env.IMAGE }}:${{ github.sha }}
