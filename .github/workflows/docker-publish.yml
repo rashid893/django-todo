@@ -10,8 +10,7 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      # hardcode your repo here (MUST be lowercase)
-      REPO: rashid893/django-todo
+      REPO: rashid893/django-todo   # must be lowercase and match Hub repo
 
     steps:
       - uses: actions/checkout@v4
