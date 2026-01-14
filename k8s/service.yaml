@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: django-service
+spec:
+  type: LoadBalancer
+  selector:
+    app: django
+    version: blue   # ACTIVE VERSION
+  ports:
+  - port: 80
+    targetPort: 8000

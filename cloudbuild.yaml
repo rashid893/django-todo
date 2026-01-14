@@ -1,0 +1,47 @@
+steps:
+  # 1️⃣ Build image
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -t
+      - asia-docker.pkg.dev/production-grade-project/my-app-repo/django-todo:$SHORT_SHA
+      - .
+
+  # 2️⃣ Push image to Artifact Registry
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - push
+      - asia-docker.pkg.dev/production-grade-project/my-app-repo/django-todo:$SHORT_SHA
+
+  # 3️⃣ SSH into VM and deploy
+  - name: gcr.io/cloud-builders/gcloud
+    entrypoint: bash
+    args:
+      - -c
+      - |
+        gcloud compute ssh django-todo-vm \
+        --zone=asia-south1-c \
+        --ssh-flag="-o StrictHostKeyChecking=no" \
+        --command="
+          # Authenticate Docker to Artifact Registry
+          gcloud auth configure-docker asia-docker.pkg.dev -q &&
+
+          # Pull latest image
+          docker pull asia-docker.pkg.dev/production-grade-project/my-app-repo/django-todo:$SHORT_SHA &&
+
+          # Stop & remove old container
+          docker stop django-todo || true &&
+          docker rm django-todo || true &&
+
+          # Run new container
+          docker run -d \
+            --name django-todo \
+            -p 80:8000 \
+            asia-docker.pkg.dev/production-grade-project/my-app-repo/django-todo:$SHORT_SHA
+        "
+
+images:
+  - asia-docker.pkg.dev/production-grade-project/my-app-repo/django-todo:$SHORT_SHA
+
+options:
+  logging: CLOUD_LOGGING_ONLY
